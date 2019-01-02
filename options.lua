@@ -122,12 +122,25 @@ local options = {
 					order = 500,
 					arg = 'updateFrequency',
 				},
-
+				interpolationMaxPoints = {
+					name = "Interpolation Max Points",
+					type = 'range',
+					min = 2, max = 100, step = 1,
+					order = 550,
+					arg = 'interpolationMaxPoints',
+				},
+				interpolationMinPoints = {
+					name = "Interpolation Min Points",
+					type = 'range',
+					min = 2, max = 100, step = 1,
+					order = 600,
+					arg = 'interpolationMinPoints',
+				},
 				debug = {
 					name = "Debug",
 					desc = "Enables debug messages.",
 					type = 'toggle',
-					order = 550,
+					order = 650,
 					arg = 'debug',
 				},
 

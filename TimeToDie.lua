@@ -16,6 +16,8 @@ local format = format
 local ceil = ceil
 local debug = debug
 local updateFrequency = updateFrequency
+local interpolationMaxPoints = interpolationMaxPoints
+local interpolationMinPoints = interpolationMinPoints
 
 local defaults = {
 	profile = {
@@ -23,6 +25,8 @@ local defaults = {
 		frame = true,
 		locked = false,
 		updateFrequency = 0.1,
+		interpolationMaxPoints = 100,
+		interpolationMinPoints = 3,
 		debug = false,
 		font = defaultFont,
 		size = 24,
@@ -74,41 +78,63 @@ local health0, time0 -- initial health and time point
 local previousHealth, previousTime
 local mhealth, mtime -- current midpoint
 
-function TimeToDie:Midpoints(currentHealth, currentTime)
-	TimeToDie:PrintDebug('TimeToDie:Midpoints()')
+local interpolationHealthPoints = {}
+local interpolationTimePoints = {}
+local interpolationSavedPoints = 0
+local interpolationIndex = 0
 
-	if not health0 then
-		TimeToDie:PrintDebug('TimeToDie:Midpoints() -> health0 not set yet: setting and returning')
-		health0, time0 = currentHealth, currentTime
-		mhealth, mtime = currentHealth, currentTime
-		previousTime = currentTime
+function TimeToDie:ProjectTime(currentHealth, currentTime)
+	TimeToDie:PrintDebug('TimeToDie:ProjectTime()')
+
+	if interpolationSavedPoints < interpolationMaxPoints then
+		interpolationIndex = interpolationIndex + 1
+		interpolationSavedPoints = interpolationSavedPoints + 1
+	else
+		interpolationIndex = 0
+	end
+
+	interpolationHealthPoints[interpolationIndex] = currentHealth
+	interpolationTimePoints[interpolationIndex] = currentTime
+
+	if interpolationSavedPoints < interpolationMinPoints then
 		return
 	end
 
-	mhealth = (mhealth + currentHealth) * .5
-	mtime = (mtime + currentTime) * .5
+	local healthSum = 0
+	local timeSum = 0
+	local healthTimeSum = 0
+	local timeSquaredSum = 0
+	for i=1,interpolationSavedPoints do
+		healthSum = healthSum + interpolationHealthPoints[i]
+		timeSum = timeSum + interpolationTimePoints[i]
+		healthTimeSum = healthTimeSum + interpolationHealthPoints[i] * interpolationTimePoints[i]
+		timeSquaredSum = timeSquaredSum + interpolationTimePoints[i] * interpolationTimePoints[i]
+	end
 
-	if mhealth >= health0 then
-		TimeToDie:PrintDebug('TimeToDie:Midpoints() -> mhealth >= health0: resetting and returning')
-		dataobj.text, health0, time0, mhealth, mtime = nil
+	slope = (interpolationSavedPoints * healthTimeSum - healthSum * timeSum) / (interpolationSavedPoints * timeSquaredSum - timeSum * timeSum)
+
+	if slope >=0 then
+		TimeToDie:PrintDebug('TimeToDie:ProjectTime() -> slope non-negative: resetting and returning')
+		dataobj.text = nil
+		interpolationIndex = 0
+		interpolationSavedPoints = 0
 		return
 	end
 
-	local projectedTime = currentHealth * (time0 - mtime) / (mhealth - health0)
-		TimeToDie:PrintDebug('TimeToDie:Midpoints() -> projectedTime calculated')
+	local projectedTime = currentHealth / slope * -1
+	TimeToDie:PrintDebug('TimeToDie:ProjectTime() -> projectedTime calculated')
 	if projectedTime < 60 or timeFormat == 'seconds' then
 		dataobj.text = ceil(projectedTime)
 	else
 		dataobj.text = format(timeFormat, 1/60 * projectedTime, projectedTime % 60)
 	end
-
-	previousTime = currentTime
-	previousHealth = currentHealth
 end
 
 function TimeToDie:PLAYER_TARGET_CHANGED(self, event, unit)
 	TimeToDie:PrintDebug('TimeToDie:PLAYER_TARGET_CHANGED()')
-	dataobj.text, health0, time0, mhealth, mtime = nil
+	dataobj.text = nil
+	interpolationIndex = 0
+	interpolationSavedPoints = 0
 end
 
 local oldhealth = nil
@@ -123,7 +149,7 @@ local function OnUpdate(self, elapsed)
 	local currentTime = GetTime()
 	if oldhealth ~= currentHealth then
 		oldhealth = currentHealth
-		TimeToDie:Midpoints(currentHealth, currentTime)
+		TimeToDie:ProjectTime(currentHealth, currentTime)
 	end
 end
 
@@ -186,6 +212,8 @@ function TimeToDie:UpdateFrame(profile)
 	text:SetJustifyH(profile.justify)
 	debug = profile.debug
 	updateFrequency = profile.updateFrequency
+	interpolationMaxPoints = profile.interpolationMaxPoints
+	interpolationMinPoints = profile.interpolationMinPoints
 end
 
 function TimeToDie:PrintDebug(debugMessage)
