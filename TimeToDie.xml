@@ -1,0 +1,41 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.blizzard.com/wow/ui/
+..\FrameXML\UI.xsd">
+	<Frame name="TimeToDieFrameTemplate" movable="true" virtual="true">
+		<Size>
+			<AbsDimension x="140" y="30"/>
+		</Size>
+		<Anchors>
+			<Anchor point="CENTER"/>
+		</Anchors>
+		<Layers>
+			<Layer level="BACKGROUND">
+				<FontString inherits="GameFontNormal" text="" setAllPoints="true" parentKey="text"/>
+				<Texture parentKey="bg">
+					<Color r="0" g="0" b="0" a="0.5"/>
+				</Texture>
+			</Layer>
+		</Layers>
+		<Scripts>
+			<OnLoad>
+				self:SetClampedToScreen(true)
+				self:RegisterForDrag("LeftButton")
+				self:SetScript('OnMouseUp', TimeToDie.dataobj.OnClick)
+
+				local function mycallback(self, event, name, key, value, dataobj)
+					self.text:SetText(value)
+				end
+
+				local ldb = LibStub:GetLibrary("LibDataBroker-1.1")
+				ldb.RegisterCallback(self, "LibDataBroker_AttributeChanged_TimeToDie_text", mycallback, self)
+			</OnLoad>
+			<OnDragStart>
+				self:StartMoving();
+			</OnDragStart>
+			<OnDragStop>
+				self:StopMovingOrSizing();
+				local p = TimeToDie.db.profile
+				p.p1, _, p.p2, p.x, p.y = self:GetPoint()
+			</OnDragStop>
+		 </Scripts>
+	</Frame>
+</Ui>

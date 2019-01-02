@@ -1,0 +1,39 @@
+﻿## Interface: 80000
+## X-Curse-Packaged-Version: r101
+## X-Curse-Project-Name: TimeToDie
+## X-Curse-Project-ID: timetodie
+## X-Curse-Repository-ID: wow/timetodie/mainline
+
+## Title: TimeToDie
+## Notes: Estimated time until current target will die.
+## Notes-ruRU: Предполагаемое время за которое текущая цель должна умереть
+## Notes-frFR: Temps estimé avant que la cible actuelle ne meurt.
+## Notes-deDE: Durschnittliche Zeit bis das Target stirbt.
+## Notes-koKR: 대상이 죽을때까지 정확한 시간
+## Notes-esES: Tiempo estimado hasta que el objetivo actual muera.
+## Author: Mecdemort
+## X-eMail: Mecdemort@gmail.com
+## X-Website: http://www.curse.com/addons/wow/timetodie
+
+## Version: r101
+## X-Category: Combat
+
+## OptionalDeps: Ace3, LibSharedMedia-3.0, AceGUI-3.0-SharedMediaWidgets
+
+## SavedVariables: TimeToDieDB
+
+embeds.xml
+
+Locales\enUS.lua
+Locales\deDE.lua
+Locales\esES.lua
+Locales\frFR.lua
+Locales\koKR.lua
+Locales\ruRU.lua
+Locales\esMX.lua
+Locales\zhCN.lua
+Locales\zhTW.lua
+
+TimeToDie.xml
+TimeToDie.lua
+options.lua
