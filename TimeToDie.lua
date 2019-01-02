@@ -85,13 +85,11 @@ local interpolationIndex = 0
 
 function TimeToDie:ProjectTime(currentHealth, currentTime)
 	TimeToDie:PrintDebug('TimeToDie:ProjectTime()')
-
 	if interpolationSavedPoints < interpolationMaxPoints then
-		interpolationIndex = interpolationIndex + 1
 		interpolationSavedPoints = interpolationSavedPoints + 1
-	else
-		interpolationIndex = 0
 	end
+
+	interpolationIndex = (interpolationIndex % interpolationMaxPoints) + 1
 
 	interpolationHealthPoints[interpolationIndex] = currentHealth
 	interpolationTimePoints[interpolationIndex] = currentTime
@@ -113,16 +111,22 @@ function TimeToDie:ProjectTime(currentHealth, currentTime)
 
 	slope = (interpolationSavedPoints * healthTimeSum - healthSum * timeSum) / (interpolationSavedPoints * timeSquaredSum - timeSum * timeSum)
 
-	if slope >=0 then
-		TimeToDie:PrintDebug('TimeToDie:ProjectTime() -> slope non-negative: resetting and returning')
-		dataobj.text = nil
-		interpolationIndex = 0
-		interpolationSavedPoints = 0
+	if slope >= 0 then
+		TimeToDie:PrintDebug('TimeToDie:ProjectTime() -> slope non-negative')
+		TimeToDie:ResetInterpolation()
 		return
 	end
 
 	local projectedTime = currentHealth / slope * -1
+	
 	TimeToDie:PrintDebug('TimeToDie:ProjectTime() -> projectedTime calculated')
+	
+	if projectedTime > 86400 then
+		TimeToDie:PrintDebug('TimeToDie:ProjectTime() -> projected time too big')
+		TimeToDie:ResetInterpolation()
+		return
+	end
+	
 	if projectedTime < 60 or timeFormat == 'seconds' then
 		dataobj.text = ceil(projectedTime)
 	else
@@ -131,13 +135,16 @@ function TimeToDie:ProjectTime(currentHealth, currentTime)
 end
 
 function TimeToDie:PLAYER_TARGET_CHANGED(self, event, unit)
-	TimeToDie:PrintDebug('TimeToDie:PLAYER_TARGET_CHANGED()')
+	TimeToDie:ResetInterpolation()
+end
+
+function TimeToDie:ResetInterpolation()
+	TimeToDie:PrintDebug('TimeToDie:ResetInterpolation()')
 	dataobj.text = nil
 	interpolationIndex = 0
 	interpolationSavedPoints = 0
 end
 
-local oldhealth = nil
 local totalElapsed = 0
 local function OnUpdate(self, elapsed)
 	totalElapsed = totalElapsed + elapsed
@@ -146,11 +153,13 @@ local function OnUpdate(self, elapsed)
 	end
 	totalElapsed = 0
 	local currentHealth = UnitHealth('target')
-	local currentTime = GetTime()
-	if oldhealth ~= currentHealth then
-		oldhealth = currentHealth
-		TimeToDie:ProjectTime(currentHealth, currentTime)
+	if currentHealth <= 0 then
+		TimeToDie:ResetInterpolation()
+		return
 	end
+
+	local currentTime = GetTime()
+	TimeToDie:ProjectTime(currentHealth, currentTime)
 end
 
 
