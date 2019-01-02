@@ -36,10 +36,6 @@ local function IsFrameDisabled(info)
 	return not info.handler.db.profile.frame
 end
 
-local function IsToTEnabled(info)
-	return not info.handler.db.profile.enemy
-end
-
 local function GetFontList()
 	return AceGUIWidgetLSMlists.font
 end
@@ -52,42 +48,12 @@ local options = {
 	set = SetValue,
 	handler = TimeToDie,
 	args = {
-		[ENEMY] = {
-			name = ENEMY,
-			type = 'toggle',
-			desc = L["Only track enemy targets."],
-			order = 100,
-			arg = 'enemy',
-		},
-		[FOCUS] = {
-			name = FOCUS,
-			type = 'toggle',
-			desc = L["Use focus instead of target."],
-			order = 150,
-			arg = 'target',
-		},
-		[SHOW_TARGET_OF_TARGET_TEXT] = {
-			name = SHOW_TARGET_OF_TARGET_TEXT,
-			type = 'toggle',
-			desc = L["Use target of target when your target is friendly."],
-			order = 200,
-			arg = 'tot',
-			disabled = IsToTEnabled,
-		},
 		[FORMATTING] = {
 			name = FORMATTING,
 			type = 'select',
 			values = {['%d:%02d'] = '12:34', ['%dm %ds'] = '12m 34s', seconds = '754'},
 			order = 250,
 			arg = 'timeFormat',
-		},
-		[L["Algorithm"]] = {
-			name = L["Algorithm"],
-			type = 'select',
-			values = {InitialMidpoints = L["Initial Midpoints (Original)"], LeastSquares = L["Least Squares"], WeightedLeastSquares = L["Weighted Least Squares"]},
-			order = 300,
-			arg = 'algorithm',
-			width = 'double',
 		},
 		[DISPLAY] = {
 			name = DISPLAY,
@@ -97,13 +63,6 @@ local options = {
 			set = SetFrameValue,
 			disabled = IsFrameDisabled,
 			args = {
-				[ENABLE] = {
-					name = ENABLE,
-					type = 'toggle',
-					order = 100,
-					arg = 'frame',
-					disabled = false,
-				},
 				[LOCKED] = {
 					name = LOCKED,
 					type = 'toggle',
@@ -156,6 +115,22 @@ local options = {
 					order = 450,
 					arg = 'justify',
 				},
+				updateFrequency = {
+					name = "Update Frequency",
+					type = 'range',
+					min = 0.1, max = 10, step = 0.1,
+					order = 500,
+					arg = 'updateFrequency',
+				},
+
+				debug = {
+					name = "Debug",
+					desc = "Enables debug messages.",
+					type = 'toggle',
+					order = 550,
+					arg = 'debug',
+				},
+
 			},
 		},
 	},

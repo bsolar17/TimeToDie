@@ -14,17 +14,16 @@ local UnitHealthMax = UnitHealthMax
 local UnitExists = UnitExists
 local format = format
 local ceil = ceil
+local debug = debug
+local updateFrequency = updateFrequency
 
 local defaults = {
 	profile = {
-		enemy = true,
-		target = false, -- false := 'target', true := 'focus'
-		tot = false,
 		timeFormat = '%d:%02d',
-		algorithm = 'InitialMidpoints',
-
 		frame = true,
 		locked = false,
+		updateFrequency = 0.1,
+		debug = false,
 		font = defaultFont,
 		size = 24,
 		outline = '',
@@ -42,6 +41,7 @@ local defaults = {
 }
 
 function TimeToDie:OnInitialize()
+	print('TimeToDie:OnInitialize()')
 	local db = LibStub('AceDB-3.0'):New('TimeToDieDB', defaults, 'Default')
 	self.db = db
 	local RegisterCallback = db.RegisterCallback
@@ -53,213 +53,89 @@ function TimeToDie:OnInitialize()
 end
 
 function TimeToDie:OnEnable()
+	print('TimeToDie:OnEnable()')
+
 	local profile = self.db.profile
 	self:ApplySettings(profile)
 
 	if profile.frame then
 		self:UpdateFrame(profile)
-	elseif self.frame then
-		self.frame:Hide()
 	end
-end
-
-function TimeToDie:OnDisable()
-	if self.frame then self.frame:Hide() end
-	self:DisableEventFrame()
 end
 
 -------		Event Functions		--------
 
-local profileEnemy, profileTOT, eventFrame
-local profileTarget -- := profile.target and 'focus' or 'target'
-local profileTargetTarget
-local currentTarget -- profileTarget or profileTagert..'target'
+local eventFrame
 local dataobj
 local timeFormat
 
-local ProfileAlgorithm
-
 
 local health0, time0 -- initial health and time point
+local previousHealth, previousTime
 local mhealth, mtime -- current midpoint
 
-function TimeToDie:InitialMidpoints(event, unit, health)  --health is not passed from blizz
-	if unit ~= currentTarget then return end
-
-	if unit == nil then return end
-
-	health = health or UnitHealth(unit)
-
-	if health == UnitHealthMax(unit) then
-		dataobj.text, health0, time0, mhealth, mtime = nil
-		return
-	end
-
-	local time = GetTime()
+function TimeToDie:Midpoints(currentHealth, currentTime)
+	TimeToDie:PrintDebug('TimeToDie:Midpoints()')
 
 	if not health0 then
-		health0, time0 = health, time
-		mhealth, mtime = health, time
+		TimeToDie:PrintDebug('TimeToDie:Midpoints() -> health0 not set yet: setting and returning')
+		health0, time0 = currentHealth, currentTime
+		mhealth, mtime = currentHealth, currentTime
+		previousTime = currentTime
 		return
 	end
 
-	mhealth = (mhealth + health) * .5
-	mtime = (mtime + time) * .5
+	mhealth = (mhealth + currentHealth) * .5
+	mtime = (mtime + currentTime) * .5
 
 	if mhealth >= health0 then
+		TimeToDie:PrintDebug('TimeToDie:Midpoints() -> mhealth >= health0: resetting and returning')
 		dataobj.text, health0, time0, mhealth, mtime = nil
-	else
-		time = health * (time0 - mtime) / (mhealth - health0)  -- projected time
-		if time < 60 or timeFormat == 'seconds' then
-			dataobj.text = ceil(time)
-		else
-			dataobj.text = format(timeFormat, 1/60 * time, time % 60)
-		end
+		return
 	end
+
+	local projectedTime = currentHealth * (time0 - mtime) / (mhealth - health0)
+		TimeToDie:PrintDebug('TimeToDie:Midpoints() -> projectedTime calculated')
+	if projectedTime < 60 or timeFormat == 'seconds' then
+		dataobj.text = ceil(projectedTime)
+	else
+		dataobj.text = format(timeFormat, 1/60 * projectedTime, projectedTime % 60)
+	end
+
+	previousTime = currentTime
+	previousHealth = currentHealth
 end
 
-local n -- number of points for averaging
-
--- x,y := time,health
--- health0, time0, mhealth, mtime := ysum, xsum, xysum, xxsum
-function TimeToDie:LeastSquares(event, unit, health)  --health is not passed from blizz
-	if unit ~= currentTarget then return end
-
-	if unit == nil then return end
-
-	health = health or UnitHealth(unit)
-
-	if health == UnitHealthMax(unit) then
-		dataobj.text, n = nil
-		return
-	end
-
-	local time = GetTime()
-
-	if not n then
-		n = 1
-		time0, health0 = time, health
-		mhealth = time * health
-		mtime = time * time
-		return
-	end
-
-	n = n + 1
-	time0 = time0 + time
-	health0 = health0 + health
-	mhealth = mhealth + time * health
-	mtime = mtime + time * time
-
-   time = (health0 * mtime - mhealth * time0) / (health0 * time0 - mhealth * n) - time  -- projected time
-
-	if time < 0 then
-		dataobj.text, n = nil
-	elseif time < 60 or timeFormat == 'seconds' then
-		dataobj.text = ceil(time)
-	else
-		dataobj.text = format(timeFormat, 1/60 * time, time % 60)
-	end
-end
-
--- x,y := time,health
--- health0, time0, mhealth, mtime := ybar, xbar, xybar, xxbar
-function TimeToDie:WeightedLeastSquares(event, unit, health)  --health is not passed from blizz
-	if unit ~= currentTarget then return end
-
-	if unit == nil then return end
-
-	health = health or UnitHealth(unit)
-
-	if health == UnitHealthMax(unit) then
-		dataobj.text, n = nil
-		return
-	end
-
-	local time = GetTime()
-
-	if not n then
-		n = 1
-		time0, health0 = time, health
-		mhealth = time * health
-		mtime = time * time
-		return
-	end
-
-   time0 = (time0 + time) * .5
-   health0 = (health0 + health) * .5
-   mhealth = (mhealth + time * health) * .5
-   mtime = (mtime + time * time) * .5
-
-   time = (mtime * health0 - time0 * mhealth) / (time0 * health0 - mhealth) - time  -- projected time
-
-	if time < 0 then
-		dataobj.text, n = nil
-	elseif time < 60 or timeFormat == 'seconds' then
-		dataobj.text = ceil(time)
-	else
-		dataobj.text = format(timeFormat, 1/60 * time, time % 60)
-	end
-end
-
-function TimeToDie:OnChange(event)
-	dataobj.text, health0, time0, mhealth, mtime, n = nil
-
-	currentTarget = profileTarget
-	if profileEnemy and UnitIsFriend('player', currentTarget) then
-		if profileTOT and UnitExists(profileTargetTarget) and not UnitIsFriend('player', profileTargetTarget) then
-			currentTarget = profileTargetTarget
-		else
-			currentTarget = nil
-			if eventFrame then eventFrame:Hide() end -- stops error in OnUpdate
-		end
-	end
+function TimeToDie:PLAYER_TARGET_CHANGED(self, event, unit)
+	TimeToDie:PrintDebug('TimeToDie:PLAYER_TARGET_CHANGED()')
+	dataobj.text, health0, time0, mhealth, mtime = nil
 end
 
 local oldhealth = nil
 local totalElapsed = 0
 local function OnUpdate(self, elapsed)
 	totalElapsed = totalElapsed + elapsed
-	if totalElapsed < .1 then return end
+	if totalElapsed < updateFrequency then
+		return
+	end
 	totalElapsed = 0
-
-	local health = UnitHealth(currentTarget)
-	if oldhealth ~= health then
-		oldhealth = health
-		ProfileAlgorithm(TimeToDie, 'UNIT_HEALTH', currentTarget, health)
+	local currentHealth = UnitHealth('target')
+	local currentTime = GetTime()
+	if oldhealth ~= currentHealth then
+		oldhealth = currentHealth
+		TimeToDie:Midpoints(currentHealth, currentTime)
 	end
 end
 
---unit := target, player, or nil (focus)
-local function UNIT_TARGET(self, event, unit)
-	if unit == 'player' then
-		unit = 'target'
-	elseif event == 'PLAYER_FOCUS_CHANGED' then
-		unit = 'focus'
-	elseif unit and not UnitIsFriend("player",unit) then
-		return -- oscarucb: Ignore UNIT_TARGET events from our enemy changing targets!
-	end
-	if unit == profileTarget then -- unit is now either 'target' or 'focus'
-		TimeToDie:OnChange()
-		if currentTarget and currentTarget ~= unit then --target == unit..'target'
-			self:Show()
-		else
-			self:Hide()
-		end
-	end
-end
 
 function TimeToDie:EnableEventFrame()
 	if not eventFrame then
 		eventFrame = CreateFrame('Frame')
 		self.eventFrame = eventFrame
-		eventFrame:SetScript('OnEvent', UNIT_TARGET)
-		eventFrame:SetScript('OnUpdate', OnUpdate)
 	end
-	eventFrame:Hide() -- turn off OnUpdate when changing options
-	eventFrame:RegisterEvent('UNIT_TARGET') -- covers player, targettarget, and focustarget
-	eventFrame:RegisterEvent('PLAYER_FOCUS_CHANGED')  -- covers focus
-	--make a call in case targets are already set when enabled
-	UNIT_TARGET(eventFrame, nil, profileTarget)
+	self:RegisterEvent('PLAYER_TARGET_CHANGED', PLAYER_TARGET_CHANGED)
+	eventFrame:SetScript('OnUpdate', OnUpdate)
+	eventFrame:Show()
 end
 
 function TimeToDie:DisableEventFrame()
@@ -270,31 +146,9 @@ function TimeToDie:DisableEventFrame()
 end
 
 function TimeToDie:ApplySettings(profile)
-	self:UnregisterAllEvents()
-
-	local algorithm = profile.algorithm
-	self:RegisterEvent('UNIT_HEALTH', algorithm)
-	ProfileAlgorithm = self[algorithm]
-
+	self:DisableEventFrame()
 	timeFormat = profile.timeFormat
-	profileEnemy = profile.enemy
-	profileTOT = profile.tot
-
-	if profile.target then
-		profileTarget = 'focus'
-		self:RegisterEvent('PLAYER_FOCUS_CHANGED', 'OnChange')
-	else
-		profileTarget = 'target'
-		self:RegisterEvent('PLAYER_TARGET_CHANGED', 'OnChange')
-	end
-
-	if profileEnemy and profileTOT then
-		profileTargetTarget = profileTarget..'target'
-		self:EnableEventFrame()
-	else
-		self:DisableEventFrame()
-		self:OnChange()  -- this is called from EnableEventFrame, so need one here
-	end
+	self:EnableEventFrame()
 end
 
 function TimeToDie:UpdateFrame(profile)
@@ -330,7 +184,16 @@ function TimeToDie:UpdateFrame(profile)
 
 	frame:SetFrameStrata(profile.strata)
 	text:SetJustifyH(profile.justify)
+	debug = profile.debug
+	updateFrequency = profile.updateFrequency
 end
+
+function TimeToDie:PrintDebug(debugMessage)
+	if debug then
+		print(debugMessage)
+	end
+end
+
 
 dataobj = LibStub:GetLibrary('LibDataBroker-1.1'):NewDataObject('TimeToDie', {
 	type = 'data source',
@@ -347,4 +210,4 @@ function TimeToDie:Debug(...)
 	EventTraceFrame:Show()
 	EventTraceFrame_OnEvent(EventTraceFrame, ...)
 end
---@end-debug@]===]
+--@end-debug@]===]--
