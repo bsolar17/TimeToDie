@@ -7,14 +7,10 @@ local SML = LibStub("LibSharedMedia-3.0")
 
 -------		Initialization		-------
 
-local UnitIsFriend = UnitIsFriend
 local UnitHealth = UnitHealth
 local GetTime = GetTime
-local UnitHealthMax = UnitHealthMax
-local UnitExists = UnitExists
 local format = format
 local ceil = ceil
-local debug = debug
 local updateFrequency = updateFrequency
 local interpolationMaxPoints = interpolationMaxPoints
 local interpolationMinPoints = interpolationMinPoints
@@ -25,9 +21,8 @@ local defaults = {
 		frame = true,
 		locked = false,
 		updateFrequency = 0.1,
-		interpolationMaxPoints = 100,
+		interpolationMaxPoints = 50,
 		interpolationMinPoints = 3,
-		debug = false,
 		font = defaultFont,
 		size = 24,
 		outline = '',
@@ -73,18 +68,12 @@ local eventFrame
 local dataobj
 local timeFormat
 
-
-local health0, time0 -- initial health and time point
-local previousHealth, previousTime
-local mhealth, mtime -- current midpoint
-
 local interpolationHealthPoints = {}
 local interpolationTimePoints = {}
 local interpolationSavedPoints = 0
 local interpolationIndex = 0
 
 function TimeToDie:ProjectTime(currentHealth, currentTime)
-	TimeToDie:PrintDebug('TimeToDie:ProjectTime()')
 	if interpolationSavedPoints < interpolationMaxPoints then
 		interpolationSavedPoints = interpolationSavedPoints + 1
 	end
@@ -112,17 +101,13 @@ function TimeToDie:ProjectTime(currentHealth, currentTime)
 	slope = (interpolationSavedPoints * healthTimeSum - healthSum * timeSum) / (interpolationSavedPoints * timeSquaredSum - timeSum * timeSum)
 
 	if slope >= 0 then
-		TimeToDie:PrintDebug('TimeToDie:ProjectTime() -> slope non-negative')
 		TimeToDie:ResetInterpolation()
 		return
 	end
 
 	local projectedTime = currentHealth / slope * -1
 	
-	TimeToDie:PrintDebug('TimeToDie:ProjectTime() -> projectedTime calculated')
-	
 	if projectedTime > 86400 then
-		TimeToDie:PrintDebug('TimeToDie:ProjectTime() -> projected time too big')
 		TimeToDie:ResetInterpolation()
 		return
 	end
@@ -139,7 +124,6 @@ function TimeToDie:PLAYER_TARGET_CHANGED(self, event, unit)
 end
 
 function TimeToDie:ResetInterpolation()
-	TimeToDie:PrintDebug('TimeToDie:ResetInterpolation()')
 	dataobj.text = nil
 	interpolationIndex = 0
 	interpolationSavedPoints = 0
@@ -219,18 +203,10 @@ function TimeToDie:UpdateFrame(profile)
 
 	frame:SetFrameStrata(profile.strata)
 	text:SetJustifyH(profile.justify)
-	debug = profile.debug
 	updateFrequency = profile.updateFrequency
 	interpolationMaxPoints = profile.interpolationMaxPoints
 	interpolationMinPoints = profile.interpolationMinPoints
 end
-
-function TimeToDie:PrintDebug(debugMessage)
-	if debug then
-		print(debugMessage)
-	end
-end
-
 
 dataobj = LibStub:GetLibrary('LibDataBroker-1.1'):NewDataObject('TimeToDie', {
 	type = 'data source',
@@ -240,11 +216,3 @@ dataobj = LibStub:GetLibrary('LibDataBroker-1.1'):NewDataObject('TimeToDie', {
 })
 TimeToDie.dataobj = dataobj
 
---[===[@debug@
-function TimeToDie:Debug(...)
-	if not self.debugging then return end
-	if not IsAddOnLoaded('Blizzard_DebugTools') then LoadAddOn('Blizzard_DebugTools') end
-	EventTraceFrame:Show()
-	EventTraceFrame_OnEvent(EventTraceFrame, ...)
-end
---@end-debug@]===]--

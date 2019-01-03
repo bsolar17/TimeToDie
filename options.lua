@@ -136,14 +136,6 @@ local options = {
 					order = 600,
 					arg = 'interpolationMinPoints',
 				},
-				debug = {
-					name = "Debug",
-					desc = "Enables debug messages.",
-					type = 'toggle',
-					order = 650,
-					arg = 'debug',
-				},
-
 			},
 		},
 	},
