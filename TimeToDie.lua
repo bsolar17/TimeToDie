@@ -68,34 +68,43 @@ local eventFrame
 local dataobj
 local timeFormat
 
+
+local interpolating = false
 local interpolationHealthPoints = {}
 local interpolationTimePoints = {}
 local interpolationSavedPoints = 0
 local interpolationIndex = 0
+local healthSum = 0
+local timeSum = 0
+local healthTimeSum = 0
+local timeSquaredSum = 0
 
 function TimeToDie:ProjectTime(currentHealth, currentTime)
-	if interpolationSavedPoints < interpolationMaxPoints then
-		interpolationSavedPoints = interpolationSavedPoints + 1
-	end
+	interpolating = true
 
 	interpolationIndex = (interpolationIndex % interpolationMaxPoints) + 1
+
+	if interpolationSavedPoints < interpolationMaxPoints then
+		interpolationSavedPoints = interpolationSavedPoints + 1
+	else
+		local oldestHealth = interpolationHealthPoints[interpolationIndex]
+		local oldestTime = interpolationTimePoints[interpolationIndex]
+		healthSum = healthSum - oldestHealth
+		timeSum = timeSum - oldestTime
+		healthTimeSum = healthTimeSum - oldestHealth * oldestTime
+		timeSquaredSum = timeSquaredSum - oldestTime * oldestTime
+	end
 
 	interpolationHealthPoints[interpolationIndex] = currentHealth
 	interpolationTimePoints[interpolationIndex] = currentTime
 
+	healthSum = healthSum + currentHealth	
+	timeSum = timeSum + currentTime
+	healthTimeSum = healthTimeSum + currentHealth * currentTime
+	timeSquaredSum = timeSquaredSum + currentTime * currentTime
+
 	if interpolationSavedPoints < interpolationMinPoints then
 		return
-	end
-
-	local healthSum = 0
-	local timeSum = 0
-	local healthTimeSum = 0
-	local timeSquaredSum = 0
-	for i=1,interpolationSavedPoints do
-		healthSum = healthSum + interpolationHealthPoints[i]
-		timeSum = timeSum + interpolationTimePoints[i]
-		healthTimeSum = healthTimeSum + interpolationHealthPoints[i] * interpolationTimePoints[i]
-		timeSquaredSum = timeSquaredSum + interpolationTimePoints[i] * interpolationTimePoints[i]
 	end
 
 	slope = (interpolationSavedPoints * healthTimeSum - healthSum * timeSum) / (interpolationSavedPoints * timeSquaredSum - timeSum * timeSum)
@@ -124,9 +133,16 @@ function TimeToDie:PLAYER_TARGET_CHANGED(self, event, unit)
 end
 
 function TimeToDie:ResetInterpolation()
-	dataobj.text = nil
-	interpolationIndex = 0
-	interpolationSavedPoints = 0
+	if interpolating then
+		dataobj.text = nil
+		interpolationIndex = 0
+		interpolationSavedPoints = 0
+		healthSum = 0
+		timeSum = 0
+		healthTimeSum = 0
+		timeSquaredSum = 0
+		interpolating = false
+	end
 end
 
 local totalElapsed = 0
