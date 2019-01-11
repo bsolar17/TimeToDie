@@ -11,6 +11,7 @@ local UnitHealth = UnitHealth
 local GetTime = GetTime
 local format = format
 local ceil = ceil
+local samplingFrequency = samplingFrequency
 local updateFrequency = updateFrequency
 local interpolationMaxPoints = interpolationMaxPoints
 local interpolationMinPoints = interpolationMinPoints
@@ -20,7 +21,8 @@ local defaults = {
 		timeFormat = '%d:%02d',
 		frame = true,
 		locked = false,
-		updateFrequency = 0.1,
+		samplingFrequency = 0.2,
+		updateFrequency = 1,
 		interpolationMaxPoints = 50,
 		interpolationMinPoints = 3,
 		font = defaultFont,
@@ -79,7 +81,7 @@ local timeSum = 0
 local healthTimeSum = 0
 local timeSquaredSum = 0
 
-function TimeToDie:ProjectTime(currentHealth, currentTime)
+function TimeToDie:ProjectTime(currentHealth, currentTime, needsUpdate)
 	interpolating = true
 
 	interpolationIndex = (interpolationIndex % interpolationMaxPoints) + 1
@@ -120,11 +122,13 @@ function TimeToDie:ProjectTime(currentHealth, currentTime)
 		TimeToDie:ResetInterpolation()
 		return
 	end
-	
-	if projectedTime < 60 or timeFormat == 'seconds' then
-		dataobj.text = ceil(projectedTime)
-	else
-		dataobj.text = format(timeFormat, 1/60 * projectedTime, projectedTime % 60)
+
+	if needsUpdate then
+		if projectedTime < 60 or timeFormat == 'seconds' then
+			dataobj.text = ceil(projectedTime)
+		else
+			dataobj.text = format(timeFormat, 1/60 * projectedTime, projectedTime % 60)
+		end
 	end
 end
 
@@ -145,21 +149,28 @@ function TimeToDie:ResetInterpolation()
 	end
 end
 
-local totalElapsed = 0
+local totalElapsedSinceLastSampling = 0
+local totalElapsedSinceLastUpdate = 0
 local function OnUpdate(self, elapsed)
-	totalElapsed = totalElapsed + elapsed
-	if totalElapsed < updateFrequency then
+	totalElapsedSinceLastSampling = totalElapsedSinceLastSampling + elapsed
+	totalElapsedSinceLastUpdate = totalElapsedSinceLastUpdate + elapsed
+	if totalElapsedSinceLastSampling >= samplingFrequency then
+		totalElapsedSinceLastSampling = 0
+		local currentHealth = UnitHealth('target')
+		if currentHealth <= 0 then
+			TimeToDie:ResetInterpolation()
 		return
-	end
-	totalElapsed = 0
-	local currentHealth = UnitHealth('target')
-	if currentHealth <= 0 then
-		TimeToDie:ResetInterpolation()
-		return
+		end
+
+		local currentTime = GetTime()
+		local needsUpdate = false
+		if totalElapsedSinceLastUpdate >= updateFrequency then
+			needsUpdate = true
+			totalElapsedSinceLastUpdate = 0
+		end
+		TimeToDie:ProjectTime(currentHealth, currentTime, needsUpdate)
 	end
 
-	local currentTime = GetTime()
-	TimeToDie:ProjectTime(currentHealth, currentTime)
 end
 
 
@@ -219,6 +230,7 @@ function TimeToDie:UpdateFrame(profile)
 
 	frame:SetFrameStrata(profile.strata)
 	text:SetJustifyH(profile.justify)
+	samplingFrequency = profile.samplingFrequency
 	updateFrequency = profile.updateFrequency
 	interpolationMaxPoints = profile.interpolationMaxPoints
 	interpolationMinPoints = profile.interpolationMinPoints
