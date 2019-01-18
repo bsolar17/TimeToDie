@@ -42,7 +42,6 @@ local defaults = {
 }
 
 function TimeToDie:OnInitialize()
-	print('TimeToDie:OnInitialize()')
 	local db = LibStub('AceDB-3.0'):New('TimeToDieDB', defaults, 'Default')
 	self.db = db
 	local RegisterCallback = db.RegisterCallback
@@ -54,8 +53,6 @@ function TimeToDie:OnInitialize()
 end
 
 function TimeToDie:OnEnable()
-	print('TimeToDie:OnEnable()')
-
 	local profile = self.db.profile
 	self:ApplySettings(profile)
 
