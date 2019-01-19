@@ -1,6 +1,5 @@
 local TimeToDie = TimeToDie
 local LibStub = LibStub
-local L = LibStub('AceLocale-3.0'):GetLocale('TimeToDie', true)
 
 local function GetValue(info)
 	return info.handler.db.profile[info.arg]
@@ -43,75 +42,75 @@ end
 local options = {
 	name = 'TimeToDie',
 	type = 'group',
-	desc = L["Estimated time until current target will die."],
+	desc = 'Estimated time until current target will die.',
 	get = GetValue,
 	set = SetValue,
 	handler = TimeToDie,
 	args = {
-		[FORMATTING] = {
-			name = FORMATTING,
+		formatting = {
+			name = 'formatting',
 			type = 'select',
 			values = {['%d:%02d'] = '12:34', ['%dm %ds'] = '12m 34s', seconds = '754'},
 			order = 250,
 			arg = 'timeFormat',
 		},
-		[DISPLAY] = {
-			name = DISPLAY,
+		display = {
+			name = 'display',
 			type = 'group',
 			order = 400,
 			guiInline = true,
 			set = SetFrameValue,
 			disabled = IsFrameDisabled,
 			args = {
-				[LOCKED] = {
-					name = LOCKED,
+				locked = {
+					name = 'Locked',
 					type = 'toggle',
 					desc = LOCK_FOCUS_FRAME,
 					order = 150,
 					arg = 'locked',
 				},
-				[L["Font"]] = {
-					name = L["Font"],
+				font = {
+					name = 'Font',
 					type = 'select',
 					dialogControl = 'LSM30_Font',
 					values = GetFontList,  --wrap in function to keep values current
 					order = 200,
 					arg = 'font',
 				},
-				[FONT_SIZE] = {
-					name = FONT_SIZE,
+				fontSize = {
+					name = 'Font Size',
 					type = 'range',
 					min = 4, max = 27, step = 1,
 					order = 250,
 					arg = 'size',
 				},
-				[L["Outline"]] = {
-					name = L["Outline"],
+				outline = {
+					name = 'Outline',
 					type = 'select',
-					desc = L["Set font outline."],
-					values = {[''] = NONE, OUTLINE = VOICE_CHAT_NORMAL, THICKOUTLINE = L["Thick"]},
+					desc = 'Set font outline.',
+					values = {[''] = NONE, OUTLINE = VOICE_CHAT_NORMAL, THICKOUTLINE = 'Thick'},
 					order = 300,
 					arg = 'outline',
 				},
-				[COLOR] = {
-					name = COLOR,
+				color = {
+					name = 'Color',
 					type = 'color',
 					set = SetColor,
 					get = GetColor,
 					order = 350,
 				},
-				[L["Strata"]] = {
-					name = L["Strata"],
+				strata = {
+					name = 'Strata',
 					type = 'select',
-					desc = L["Set frame strata."],
+					desc = 'Set frame strata.',
 					values = {HIGH = HIGH, MEDIUM = AUCTION_TIME_LEFT2, LOW = LOW, BACKGROUND = BACKGROUND},
 					order = 400,
 					arg = 'strata',
 				},
-				[L["Justify"]] = {
-					name = L["Justify"],
+				justify = {
+					name = 'Justify',
 					type = 'select',
-					values = {LEFT = L["Left"], CENTER = L["Center"], RIGHT = L["Right"]},
+					values = {LEFT = 'Left', CENTER = 'Center', RIGHT = 'Right'},
 					order = 450,
 					arg = 'justify',
 				},
@@ -168,7 +167,7 @@ function TimeToDie:RegisterOptions()
 		dataobj.OnClick = function() InterfaceOptionsFrame_OpenToCategory(main) end
 		dataobj.OnTooltipShow = function(tooltip)
 			tooltip:AddLine('TimeToDie')
-			tooltip:AddLine(L["Estimated time until current target will die."])
+			tooltip:AddLine('Estimated time until current target will die.')
 		end
 	end
 end
