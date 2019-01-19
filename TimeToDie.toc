@@ -1,16 +1,7 @@
 ﻿## Interface: 80000
-## X-Curse-Packaged-Version: r101
-## X-Curse-Project-Name: TimeToDie
-## X-Curse-Project-ID: timetodie
-## X-Curse-Repository-ID: wow/timetodie/mainline
-
 ## Title: TimeToDie
-## Author: Mecdemort
-## X-eMail: Mecdemort@gmail.com
-## X-Website: http://www.curse.com/addons/wow/timetodie
 
-## Version: r101
-## X-Category: Combat
+## Based on original TimeToDie authored by Mecdemort
 
 ## OptionalDeps: Ace3, LibSharedMedia-3.0, AceGUI-3.0-SharedMediaWidgets
 
